@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Santa Wishes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --red:#C0392B;--red-deep:#96281B;--red-light:#E74C3C;
+      --gold:#D4A843;--gold-light:#F0C060;
+      --green:#1A5C38;--green-mid:#27AE60;
+      --cream:#FDF8F0;--cream-dark:#F5EDD8;
+      --dark:#1C1410;--text:#2C1810;--muted:#7A6050;
+      --white:#fff;--r:16px;--rs:8px;
+    }
+    html,body{height:100%;font-family:'Lato',sans-serif;background:var(--dark)}
+    .app{min-height:100vh;background:linear-gradient(160deg,#0D0A08,#1C1410 40%,#0F1A0F);position:relative;overflow-x:hidden}
+    .snow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .flake{position:absolute;top:-20px;color:rgba(255,255,255,.6);animation:fall linear infinite}
+    @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+    .wrap{position:relative;z-index:1}
+
+    /* Nav */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(28,20,16,.75);backdrop-filter:blur(12px);border-bottom:1px solid rgba(212,168,67,.15);position:sticky;top:0;z-index:100}
+    .nav-logo{height:38px;width:auto}
+    .nav-right{display:flex;align-items:center;gap:10px}
+    .nav-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;border:2px solid var(--gold);flex-shrink:0}
+    .nav-name{color:var(--cream);font-size:13px}
+    .nav-out{background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:12px;font-family:'Lato',sans-serif;cursor:pointer;transition:all .2s}
+    .nav-out:hover{border-color:var(--red-light);color:var(--red-light)}
+
+    /* Auth */
+    .auth-page{max-width:420px;margin:0 auto;padding:32px 20px 60px}
+    .auth-logo{display:block;width:180px;margin:0 auto 8px;filter:drop-shadow(0 4px 16px rgba(212,168,67,.4))}
+    .auth-sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:28px}
+    .card{background:linear-gradient(145deg,rgba(253,248,240,.97),rgba(245,237,216,.95));border-radius:var(--r);box-shadow:0 8px 48px rgba(28,20,16,.25),0 0 0 1px rgba(212,168,67,.2)}
+    .auth-card{padding:36px}
+    .atabs{display:flex;border-bottom:2px solid var(--cream-dark);margin-bottom:28px}
+    .atab{flex:1;padding:11px;background:none;border:none;font-family:'Lato',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+    .atab.on{color:var(--red);border-bottom-color:var(--red)}
+    .fg{margin-bottom:18px}
+    .fl{display:block;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+    .fi{width:100%;padding:13px 15px;border:2px solid var(--cream-dark);border-radius:var(--rs);font-family:'Lato',sans-serif;font-size:15px;color:var(--text);background:#fff;outline:none;transition:border-color .2s}
+    .fi:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.1)}
+    .fi::placeholder{color:#C0B0A0}
+    .pw-bar-wrap{height:4px;background:rgba(0,0,0,.08);border-radius:2px;margin-top:7px;overflow:hidden}
+    .pw-bar{height:100%;width:0;border-radius:2px;transition:all .3s}
+    .pw-label{font-size:11px;font-weight:700;margin-top:4px;min-height:14px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border:none;border-radius:var(--rs);font-family:'Lato',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+    .btn-red{background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;box-shadow:0 4px 16px rgba(192,57,43,.35)}
+    .btn-red:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(192,57,43,.45)}
+    .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--dark);box-shadow:0 4px 16px rgba(212,168,67,.35)}
+    .btn-gold:hover{transform:translateY(-1px)}
+    .btn-ghost{background:transparent;color:var(--muted);border:2px solid var(--cream-dark)}
+    .btn-ghost:hover{border-color:var(--muted);color:var(--text)}
+    .btn-green{background:linear-gradient(135deg,var(--green),var(--green-mid));color:#fff}
+    .btn-green:hover{transform:translateY(-1px)}
+    .btn-sm{padding:7px 14px;font-size:11px}
+    .btn-full{width:100%}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+    .alert{padding:11px 15px;border-radius:var(--rs);font-size:13px;margin-bottom:16px}
+    .alert-err{background:#FEE;color:var(--red-deep);border:1px solid #FCC}
+    .alert-ok{background:#EFE;color:var(--green);border:1px solid #CEC}
+
+    /* Main */
+    .main{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+    .tabs{display:flex;gap:3px;background:rgba(0,0,0,.3);border-radius:12px;padding:4px;margin:28px 0 24px}
+    .tab{flex:1;padding:11px 6px;background:none;border:none;border-radius:9px;font-family:'Lato',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,.4);cursor:pointer;transition:all .25s;text-align:center}
+    .tab.on{background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;box-shadow:0 3px 12px rgba(192,57,43,.4)}
+    .tab:hover:not(.on){color:rgba(255,255,255,.7)}
+    .stitle{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--cream);margin-bottom:5px}
+    .ssub{color:var(--muted);font-size:13px;margin-bottom:22px}
+
+    /* Dark form inputs */
+    .dfi{width:100%;padding:11px 13px;border:1px solid rgba(212,168,67,.25);border-radius:var(--rs);font-family:'Lato',sans-serif;font-size:14px;color:var(--cream);background:rgba(0,0,0,.3);outline:none;transition:border-color .2s}
+    .dfi:focus{border-color:var(--gold)}
+    .dfi::placeholder{color:rgba(255,255,255,.25)}
+    .dfl{display:block;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px}
+    .add-form{background:rgba(253,248,240,.05);border:1px solid rgba(212,168,67,.2);border-radius:var(--r);padding:22px;margin-bottom:22px}
+    .add-title{font-family:'Playfair Display',serif;color:var(--gold);font-size:1rem;margin-bottom:14px}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:600px){.frow{grid-template-columns:1fr}.nav-name{display:none}.tab{font-size:10px;padding:9px 3px}}
+
+    /* Wish items */
+    .wlist{display:flex;flex-direction:column;gap:10px}
+    .witem{display:flex;align-items:flex-start;gap:12px;background:rgba(253,248,240,.04);border:1px solid rgba(212,168,67,.12);border-radius:12px;padding:14px 16px;transition:all .2s}
+    .witem:hover{border-color:rgba(212,168,67,.25);background:rgba(253,248,240,.07)}
+    .wicon{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,rgba(192,57,43,.3),rgba(150,40,27,.3));display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+    .wcont{flex:1;min-width:0}
+    .wname{font-family:'Playfair Display',serif;color:var(--cream);font-size:.95rem;margin-bottom:3px}
+    .wnote{color:var(--muted);font-size:12px;margin-bottom:5px}
+    .wlink{color:var(--gold);font-size:11px;text-decoration:none;opacity:.8}
+    .wlink:hover{opacity:1}
+    .del-btn{background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:15px;padding:3px;transition:color .2s;flex-shrink:0}
+    .del-btn:hover{color:var(--red-light)}
+
+    /* Family */
+    .fam-grid{display:flex;flex-direction:column;gap:24px}
+    .fam-card{background:rgba(253,248,240,.04);border:1px solid rgba(212,168,67,.12);border-radius:var(--r);overflow:hidden}
+    .fam-head{display:flex;align-items:center;gap:12px;padding:18px 22px;background:rgba(0,0,0,.2);border-bottom:1px solid rgba(212,168,67,.1)}
+    .fam-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0}
+    .fam-name{font-family:'Playfair Display',serif;color:var(--cream);font-size:1rem}
+    .fam-count{color:var(--muted);font-size:12px}
+    .fam-items{padding:14px 22px;display:flex;flex-direction:column;gap:9px}
+    .fam-item{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:rgba(0,0,0,.15);transition:all .2s}
+    .fam-item:hover{background:rgba(0,0,0,.25)}
+    .fam-item-claimed{background:rgba(26,92,56,.12)}
+    .fam-icont{flex:1;min-width:0}
+    .fam-iname{color:var(--cream);font-size:13px;margin-bottom:2px}
+    .fam-inote{color:var(--muted);font-size:11px}
+    .claim-btn{background:linear-gradient(135deg,var(--green),var(--green-mid));color:#fff;border:none;border-radius:6px;padding:6px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;font-family:'Lato',sans-serif}
+    .claim-btn:hover{transform:translateY(-1px)}
+    .unclaim-btn{background:transparent;color:var(--green-mid);border:1px solid rgba(39,174,96,.3);border-radius:6px;padding:6px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;font-family:'Lato',sans-serif}
+    .taken-badge{display:inline-flex;align-items:center;background:rgba(39,174,96,.2);color:var(--green-mid);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:100px}
+    .llink{color:var(--gold-light);font-size:11px;text-decoration:none}
+    .llink:hover{text-decoration:underline}
+
+    /* AI */
+    .ai-wrap{max-width:620px;margin:0 auto}
+    .ai-card{background:linear-gradient(145deg,rgba(28,20,16,.9),rgba(15,26,15,.9));border:1px solid rgba(212,168,67,.2);border-radius:var(--r);padding:32px}
+    .ai-head{text-align:center;margin-bottom:28px}
+    .ai-icon{font-size:44px;margin-bottom:10px}
+    .ai-title{font-family:'Playfair Display',serif;color:var(--gold);font-size:1.5rem;margin-bottom:6px}
+    .ai-sub{color:var(--muted);font-size:13px}
+    .ai-prog{display:flex;gap:5px;margin-bottom:24px}
+    .ai-dot{height:4px;flex:1;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s}
+    .ai-dot.on{background:var(--gold)}
+    .ai-qlabel{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+    .ai-opts{display:flex;flex-wrap:wrap;gap:9px}
+    .ai-opt{padding:9px 16px;background:rgba(0,0,0,.2);border:1px solid rgba(212,168,67,.25);border-radius:8px;color:var(--cream);font-size:13px;font-family:'Lato',sans-serif;cursor:pointer;transition:all .2s}
+    .ai-opt:hover{border-color:var(--gold);background:rgba(212,168,67,.1)}
+    .sugg-list{display:flex;flex-direction:column;gap:11px}
+    .sugg-item{display:flex;align-items:center;gap:12px;padding:14px;background:rgba(253,248,240,.05);border:1px solid rgba(212,168,67,.15);border-radius:11px;transition:all .2s}
+    .sugg-item:hover{border-color:rgba(212,168,67,.35)}
+    .sugg-cont{flex:1}
+    .sugg-name{color:var(--cream);font-weight:700;font-size:14px;margin-bottom:3px}
+    .sugg-desc{color:var(--muted);font-size:12px}
+    .sugg-add{background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;border:none;border-radius:6px;padding:7px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;font-family:'Lato',sans-serif}
+    .sugg-add:hover{transform:translateY(-1px)}
+    .sugg-add:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .added-badge{color:var(--green-mid);font-size:11px;font-weight:700;flex-shrink:0}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.2),transparent);margin:24px 0}
+
+    /* Admin */
+    .adm-card{background:rgba(253,248,240,.04);border:1px solid rgba(212,168,67,.12);border-radius:var(--r);padding:24px;margin-bottom:22px}
+    .adm-title{font-family:'Playfair Display',serif;color:var(--gold);font-size:1.1rem;margin-bottom:14px}
+    .code-box{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);border:1px solid rgba(212,168,67,.2);border-radius:8px;padding:11px 15px;flex-wrap:wrap}
+    .code-val{font-family:monospace;font-size:17px;color:var(--gold);letter-spacing:3px;flex:1}
+    .copy-btn{background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);color:var(--gold);padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;transition:all .2s;letter-spacing:.5px}
+    .copy-btn:hover{background:rgba(212,168,67,.25)}
+    .mem-row{display:flex;align-items:center;gap:10px;padding:11px 13px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:7px}
+    .mem-info{flex:1}
+    .mem-name{color:var(--cream);font-size:13px;font-weight:700}
+    .mem-email{color:var(--muted);font-size:11px}
+    .rbadge{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 7px;border-radius:100px}
+    .r-admin{background:rgba(212,168,67,.2);color:var(--gold)}
+    .r-member{background:rgba(255,255,255,.08);color:var(--muted)}
+
+    /* Misc */
+    .loading{display:flex;align-items:center;justify-content:center;padding:60px;gap:12px}
+    .spinner{width:22px;height:22px;border:3px solid rgba(212,168,67,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px}
+    .noitems{color:var(--muted);font-size:13px;font-style:italic;padding:6px 0}
+    .wh{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="snow" id="snow"></div>
+  <div class="wrap" id="root">
+    <div class="loading"><div class="spinner"></div><span style="color:var(--gold)">Loading...</span></div>
+  </div>
+</div>
+<script>
+'use strict';
+// Config
+const SB_URL = 'https://qgjikyladqibpgdrdnkz.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnamlreWxhZHFpYnBnZHJkbmt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODc0MDIsImV4cCI6MjA5MTY2MzQwMn0.vBSf8ExNMEQRlqmQKxEJ7XW0h2XwBxcJZR3d2cBJ-08';
+const LOGO = '';
+const ICONS = ['🎁','🧣','📚','🎮','🎨','🧸','💄','🍷','🎵','👟','🌿','✨','🕯️','🧴','🎧'];
+const COLORS = ['#C0392B','#8E44AD','#2980B9','#16A085','#D35400','#6C3483','#1A5C38','#8B4513'];
+const avc = n => COLORS[(n||'A').charCodeAt(0) % COLORS.length];
+const ricon = () => ICONS[Math.floor(Math.random()*ICONS.length)];
+const eid = id => document.getElementById(id);
+const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+const root = () => eid('root');
+const setHTML = h => { root().innerHTML = h; };
+
+// Supabase
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+// State
+let user = null, profile = null, view = 'mylist';
+let showAdd = false, aiStep = 0, aiAns = {}, aiResults = null, aiAdded = {};
+
+// Snow
+(function(){
+  const s = eid('snow');
+  for(let i=0;i<28;i++){
+    const f = document.createElement('div');
+    f.className = 'flake';
+    f.textContent = '❄';
+    f.style.cssText = 'left:'+Math.random()*100+'%;font-size:'+(5+Math.random()*9)+'px;opacity:'+(0.3+Math.random()*0.5)+';animation-duration:'+(6+Math.random()*8)+'s;animation-delay:'+(Math.random()*8)+'s';
+    s.appendChild(f);
+  }
+})();
+
+// Boot - show login immediately, no waiting
+function boot() {
+  showLogin('login');
+  // Check for existing session in background
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user) loadUserAndGo(session.user);
+  }).catch(() => {});
+  // Handle future sign in/out
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session && session.user) {
+      loadUserAndGo(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      user = null; profile = null;
+      showLogin('login');
+    }
+  });
+}
+
+async function loadUserAndGo(u) {
+  user = u;
+  const { data } = await sb.from('profiles').select('*').eq('id', u.id).single();
+  profile = data;
+  if (!profile) {
+    // Create profile if missing
+    const { count } = await sb.from('profiles').select('*', { count: 'exact', head: true });
+    const name = u.user_metadata && u.user_metadata.name ? u.user_metadata.name : 'Member';
+    await sb.from('profiles').insert({ id: u.id, name: name, is_admin: count === 0 });
+    const { data: p2 } = await sb.from('profiles').select('*').eq('id', u.id).single();
+    profile = p2;
+  }
+  goView('mylist');
+}
+
+// Auth screens
+function showLogin(tab) {
+  setHTML(
+    '<div class="auth-page">' +
+    '<img src="' + LOGO + '" class="auth-logo" alt="Santa Wishes" />' +
+    '<p class="auth-sub">Your family's secret Christmas wishlist</p>' +
+    '<div class="card auth-card">' +
+    '<div class="atabs">' +
+    '<button class="atab ' + (tab==='login'?'on':'') + '" onclick="showLogin('login')">Sign In</button>' +
+    '<button class="atab ' + (tab==='register'?'on':'') + '" onclick="showLogin('register')">Create Account</button>' +
+    '</div>' +
+    '<div id="auth-msg"></div>' +
+    (tab==='register' ? '<div class="fg"><label class="fl">Your Name</label><input class="fi" id="fn" placeholder="e.g. Sarah" /></div>' : '') +
+    '<div class="fg"><label class="fl">Email</label><input class="fi" id="fe" type="email" placeholder="you@example.com" /></div>' +
+    '<div class="fg"><label class="fl">Password</label>' +
+    '<input class="fi" id="fp" type="password" placeholder="••••••••" ' + (tab==='register' ? 'oninput="pwStrength()"' : '') + ' />' +
+    (tab==='register' ? '<div class="pw-bar-wrap"><div class="pw-bar" id="pw-bar"></div></div><div class="pw-label" id="pw-lbl"></div>' : '') +
+    '</div>' +
+    (tab==='register' ? '<div class="fg"><label class="fl">Invite Code <span style="color:#C0B0A0;font-size:9px">(leave blank if first time setup)</span></label><input class="fi" id="fc" placeholder="XXXX-XXXX" /></div>' : '') +
+    '<button class="btn btn-red btn-full" onclick="' + (tab==='login'?'doLogin()':'doRegister()') + '">' + (tab==='login'?'Sign In':'Create Account') + '</button>' +
+    (tab==='register' ? '<p style="color:var(--muted);font-size:11px;text-align:center;margin-top:14px">First time? Leave invite code blank to become the first admin.</p>' : '') +
+    '</div></div>'
+  );
+}
+
+function authMsg(msg, ok) {
+  const el = eid('auth-msg');
+  if (el) el.innerHTML = '<div class="alert ' + (ok?'alert-ok':'alert-err') + '">' + msg + '</div>';
+}
+
+function pwStrength() {
+  const p = (eid('fp') || {}).value || '';
+  let s = 0;
+  if (p.length >= 8) s++;
+  if (p.length >= 12) s++;
+  if (/[A-Z]/.test(p)) s++;
+  if (/[0-9]/.test(p)) s++;
+  if (/[^A-Za-z0-9]/.test(p)) s++;
+  const levels = [
+    ['','rgba(255,255,255,.1)','0%'],
+    ['Very weak','#E74C3C','20%'],
+    ['Weak','#E67E22','40%'],
+    ['Fair','#F1C40F','60%'],
+    ['Strong','#27AE60','80%'],
+    ['Very strong','#1A5C38','100%']
+  ];
+  const lv = p.length === 0 ? levels[0] : levels[Math.min(s,5)];
+  const bar = eid('pw-bar'), lbl = eid('pw-lbl');
+  if (bar) { bar.style.width = lv[2]; bar.style.background = lv[1]; }
+  if (lbl) { lbl.textContent = lv[0]; lbl.style.color = lv[1]; }
+}
+
+async function doLogin() {
+  const email = (eid('fe')||{}).value || '';
+  const pass = (eid('fp')||{}).value || '';
+  if (!email || !pass) return authMsg('Please fill in all fields.');
+  const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pass });
+  if (error) return authMsg('Incorrect email or password.');
+}
+
+async function doRegister() {
+  const name = ((eid('fn')||{}).value || '').trim();
+  const email = ((eid('fe')||{}).value || '').trim();
+  const pass = (eid('fp')||{}).value || '';
+  const invite = ((eid('fc')||{}).value || '').trim().toUpperCase();
+  if (!name || !email || !pass) return authMsg('Please fill in all fields.');
+  if (pass.length < 8) return authMsg('Password must be at least 8 characters.');
+
+  const { count } = await sb.from('profiles').select('*', { count: 'exact', head: true });
+  const isFirst = count === 0;
+
+  if (!isFirst) {
+    if (!invite) return authMsg('An invite code is required to join.');
+    const { data: inv } = await sb.from('invites').select('*').eq('code', invite).eq('used', false).single();
+    if (!inv) return authMsg('Invalid or already used invite code.');
+  }
+
+  const { data: authData, error } = await sb.auth.signUp({
+    email: email, password: pass, options: { data: { name: name } }
+  });
+  if (error) return authMsg(error.message);
+
+  const uid = authData.user && authData.user.id;
+  if (!uid) return authMsg('Sign up failed, please try again.');
+
+  await sb.from('profiles').insert({ id: uid, name: name, is_admin: isFirst });
+
+  if (!isFirst && invite) {
+    const { data: inv } = await sb.from('invites').select('*').eq('code', invite).single();
+    if (inv) await sb.from('invites').update({ used: true, used_by: uid }).eq('id', inv.id);
+  }
+
+  authMsg('Account created! Signing you in...', true);
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+}
+
+// Nav + layout
+function renderNav() {
+  return '<nav class="nav">' +
+    '<div style="font-family:Playfair Display,serif;font-size:1.2rem;color:#D4A843">🎄 Santa Wishes</div>' +
+    '<div class="nav-right">' +
+    '<div class="nav-av" style="background:linear-gradient(135deg,' + avc(profile.name) + ',' + avc(profile.name) + '99)">' + esc(profile.name[0].toUpperCase()) + '</div>' +
+    '<span class="nav-name">' + esc(profile.name) + '</span>' +
+    '<button class="nav-out" onclick="signOut()">Sign out</button>' +
+    '</div></nav>';
+}
+
+function renderTabs() {
+  const tabs = [['mylist','🎁 My List'],['family','👨‍👩‍👧‍👦 Family'],['ai','✨ Gift Ideas']];
+  if (profile.is_admin) tabs.push(['admin','⚙️ Admin']);
+  return '<div class="tabs">' + tabs.map(([v,l]) =>
+    '<button class="tab ' + (view===v?'on':'') + '" onclick="goView('' + v + '')">' + l + '</button>'
+  ).join('') + '</div>';
+}
+
+async function goView(v) {
+  view = v; showAdd = false;
+  setHTML(renderNav() + '<div class="main">' + renderTabs() + '<div id="vc"><div class="loading"><div class="spinner"></div></div></div></div>');
+  if (v === 'mylist') await renderMyList();
+  else if (v === 'family') await renderFamily();
+  else if (v === 'ai') renderAI();
+  else if (v === 'admin') await renderAdmin();
+}
+
+function setVC(h) { const el = eid('vc'); if (el) el.innerHTML = h; }
+
+// My List
+async function renderMyList() {
+  const { data: items } = await sb.from('wishes').select('*').eq('user_id', user.id).order('created_at');
+  const list = (items && items.length) ? items.map(it =>
+    '<div class="witem">' +
+    '<div class="wicon">' + (it.icon||'🎁') + '</div>' +
+    '<div class="wcont">' +
+    '<div class="wname">' + esc(it.name) + '</div>' +
+    (it.note ? '<div class="wnote">' + esc(it.note) + '</div>' : '') +
+    (it.url ? '<a href="' + esc(it.url) + '" target="_blank" class="wlink">🔗 View link</a>' : '') +
+    '</div>' +
+    '<button class="del-btn" onclick="delWish('' + it.id + '')">✕</button>' +
+    '</div>'
+  ).join('') : '<div class="empty"><div style="font-size:44px;margin-bottom:10px">🎁</div><p>Your wishlist is empty. Add something!</p></div>';
+
+  setVC(
+    '<div class="wh"><div><div class="stitle">My Wishlist 🎄</div><div class="ssub">Add what you'd love for Christmas.</div></div>' +
+    '<button class="btn btn-red btn-sm" onclick="toggleAdd()">' + (showAdd?'Cancel':'+ Add Wish') + '</button></div>' +
+    (showAdd ?
+      '<div class="add-form"><div class="add-title">✦ Add a wish</div>' +
+      '<div class="fg"><label class="dfl">What do you want?</label><input class="dfi" id="wn" placeholder="e.g. Cashmere jumper in navy" /></div>' +
+      '<div class="frow"><div class="fg"><label class="dfl">Notes (optional)</label><input class="dfi" id="wo" placeholder="e.g. Size M" /></div>' +
+      '<div class="fg"><label class="dfl">Link (optional)</label><input class="dfi" id="wu" placeholder="https://..." /></div></div>' +
+      '<button class="btn btn-gold" onclick="addWish()">Add to my list</button></div>' : '') +
+    '<div class="wlist">' + list + '</div>'
+  );
+}
+
+function toggleAdd() { showAdd = !showAdd; renderMyList(); }
+
+async function addWish() {
+  const name = ((eid('wn')||{}).value||'').trim();
+  if (!name) return;
+  const note = ((eid('wo')||{}).value||'').trim();
+  const url = ((eid('wu')||{}).value||'').trim();
+  await sb.from('wishes').insert({ user_id: user.id, name: name, note: note||null, url: url||null, icon: ricon() });
+  showAdd = false; renderMyList();
+}
+
+async function delWish(id) {
+  await sb.from('wishes').delete().eq('id', id).eq('user_id', user.id);
+  renderMyList();
+}
+
+// Family
+async function renderFamily() {
+  const { data: members } = await sb.from('profiles').select('*').neq('id', user.id);
+  if (!members || !members.length) {
+    setVC('<div class="stitle">Family Wishlists 🎄</div><div class="empty" style="margin-top:28px"><div style="font-size:44px;margin-bottom:10px">👨‍👩‍👧‍👦</div><p>No other family members yet. An admin needs to send invite codes.</p></div>');
+    return;
+  }
+  const ids = members.map(m => m.id);
+  const { data: wishes } = await sb.from('wishes').select('*').in('user_id', ids).order('created_at');
+
+  const html = members.map(m => {
+    const mw = (wishes||[]).filter(w => w.user_id === m.id);
+    const claimed = mw.filter(w => w.claimed_by).length;
+    const items = mw.length ? mw.map(w => {
+      const mine = w.claimed_by === user.id;
+      const taken = !!w.claimed_by;
+      return '<div class="fam-item ' + (taken?'fam-item-claimed':'') + '">' +
+        '<span style="font-size:18px">' + (w.icon||'🎁') + '</span>' +
+        '<div class="fam-icont">' +
+        '<div class="fam-iname" style="' + (taken&&!mine?'text-decoration:line-through;opacity:.5':'') + '">' + esc(w.name) + '</div>' +
+        (w.note ? '<div class="fam-inote">' + esc(w.note) + '</div>' : '') +
+        (w.url ? '<a href="' + esc(w.url) + '" target="_blank" class="llink">🔗 View</a>' : '') +
+        '</div>' +
+        (mine ? '<button class="unclaim-btn" onclick="claimWish('' + w.id + '',true)">✓ Unclaim</button>' :
+          taken ? '<span class="taken-badge">✓ Taken</span>' :
+          '<button class="claim-btn" onclick="claimWish('' + w.id + '',false)">I'll buy this</button>') +
+        '</div>';
+    }).join('') : '<div class="noitems">No wishes added yet.</div>';
+
+    return '<div class="fam-card">' +
+      '<div class="fam-head">' +
+      '<div class="fam-av" style="background:linear-gradient(135deg,' + avc(m.name) + ',' + avc(m.name) + '99)">' + esc(m.name[0].toUpperCase()) + '</div>' +
+      '<div><div class="fam-name">' + esc(m.name) + '</div><div class="fam-count">' + mw.length + ' wishes · ' + claimed + ' claimed</div></div>' +
+      '</div><div class="fam-items">' + items + '</div></div>';
+  }).join('');
+
+  setVC('<div class="stitle">Family Wishlists 🎄</div><div class="ssub">Claim what you're buying. The receiver won't know.</div><div class="fam-grid">' + html + '</div>');
+}
+
+async function claimWish(wid, unclaim) {
+  await sb.from('wishes').update({ claimed_by: unclaim ? null : user.id }).eq('id', wid);
+  renderFamily();
+}
+
+// AI
+const AI_STEPS = [
+  {key:'age',label:'What's your age group?',type:'select',opts:['Under 16','16-25','26-35','36-50','51-65','65+']},
+  {key:'interests',label:'What are your main hobbies or interests?',type:'text',ph:'e.g. cooking, hiking, reading...'},
+  {key:'budget',label:'What's your ideal budget per gift?',type:'select',opts:['Under £25','£25-£50','£50-£100','£100-£200','£200+']},
+  {key:'personality',label:'How would you describe yourself?',type:'select',opts:['Homebody','Adventurer','Creative','Foodie','Tech lover','Fitness enthusiast','Book lover','Fashionista']},
+  {key:'owns',label:'Anything you already have plenty of or don't want?',type:'text',ph:'e.g. clothes, gadgets, wine...'}
+];
+
+function renderAI() {
+  if (aiResults) { renderSuggestions(); return; }
+  const step = AI_STEPS[aiStep];
+  const dots = AI_STEPS.map((_,i) => '<div class="ai-dot ' + (i<=aiStep?'on':'') + '"></div>').join('');
+  const opts = step.type === 'select'
+    ? '<div class="ai-opts">' + step.opts.map(o => '<button class="ai-opt" onclick="aiNext('' + o + '')">' + o + '</button>').join('') + '</div>'
+    : '<div style="margin-top:8px"><input class="dfi" id="ai-txt" placeholder="' + step.ph + '" style="margin-bottom:10px" onkeydown="if(event.key==='Enter')aiNextTxt()" /><button class="btn btn-gold" onclick="aiNextTxt()">Continue →</button></div>';
+
+  setVC('<div class="ai-wrap"><div class="ai-card">' +
+    '<div class="ai-head"><div class="ai-icon">✨</div><div class="ai-title">Gift Idea Finder</div><div class="ai-sub">Answer a few questions and we'll suggest gifts you'll love</div></div>' +
+    '<div class="ai-prog">' + dots + '</div>' +
+    '<div class="ai-qlabel">Question ' + (aiStep+1) + ' of ' + AI_STEPS.length + ': ' + step.label + '</div>' +
+    opts +
+    (aiStep > 0 ? '<button class="btn btn-ghost btn-sm" style="margin-top:14px" onclick="aiBack()">← Back</button>' : '') +
+    '</div></div>');
+}
+
+function aiNextTxt() { const v = ((eid('ai-txt')||{}).value||'').trim(); if(v) aiNext(v); }
+function aiBack() { aiStep = Math.max(0,aiStep-1); renderAI(); }
+async function aiNext(val) {
+  aiAns[AI_STEPS[aiStep].key] = val;
+  if (aiStep < AI_STEPS.length-1) { aiStep++; renderAI(); }
+  else await aiGenerate();
+}
+
+async function aiGenerate() {
+  setVC('<div class="ai-wrap"><div class="ai-card" style="text-align:center;padding:56px"><div style="font-size:44px;margin-bottom:14px">🎅</div><div style="color:var(--gold);font-family:Playfair Display,serif;font-size:1.2rem;margin-bottom:8px">Santa's thinking...</div><div style="color:var(--muted);font-size:13px;margin-bottom:20px">Finding the perfect gifts for you</div><div class="spinner" style="margin:0 auto"></div></div></div>');
+  try {
+    const prompt = 'You are a Christmas gift advisor. Suggest 6 specific creative Christmas gift ideas based on: Age: ' + aiAns.age + ', Interests: ' + aiAns.interests + ', Budget: ' + aiAns.budget + ', Personality: ' + aiAns.personality + ', Already has: ' + aiAns.owns + '. Respond ONLY with a JSON array, no markdown, no backticks, no explanation. Format: [{"name":"Gift Name","description":"One sentence why.","url":"https://amazon.co.uk/s?k=keywords"}]';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    const text = (data.content && data.content.find(b => b.type === 'text') || {}).text || '[]';
+    aiResults = JSON.parse(text.replace(/```json|```/g,'').trim());
+    renderSuggestions();
+  } catch(e) {
+    setVC('<div class="ai-wrap"><div class="ai-card"><div class="alert alert-err">Couldn't get suggestions. Please try again.</div><button class="btn btn-ghost" onclick="aiReset()">Start again</button></div></div>');
+  }
+}
+
+function renderSuggestions() {
+  const items = aiResults.map((s,i) =>
+    '<div class="sugg-item">' +
+    '<span style="font-size:22px">' + ICONS[i%ICONS.length] + '</span>' +
+    '<div class="sugg-cont"><div class="sugg-name">' + esc(s.name) + '</div><div class="sugg-desc">' + esc(s.description) + '</div></div>' +
+    (aiAdded[s.name] ? '<span class="added-badge">✓ Added</span>' : '<button class="sugg-add" onclick="addSugg(' + i + ')">+ Add</button>') +
+    '</div>'
+  ).join('');
+  setVC('<div class="ai-wrap"><div class="ai-card">' +
+    '<div class="ai-head"><div class="ai-icon">🎁</div><div class="ai-title">Your Gift Ideas</div><div class="ai-sub">Add anything you like to your wishlist</div></div>' +
+    '<div class="sugg-list">' + items + '</div>' +
+    '<div class="divider"></div>' +
+    '<button class="btn btn-ghost btn-full" onclick="aiReset()">Start again</button>' +
+    '</div></div>');
+}
+
+async function addSugg(i) {
+  const s = aiResults[i];
+  await sb.from('wishes').insert({ user_id: user.id, name: s.name, note: s.description, url: s.url, icon: ricon() });
+  aiAdded[s.name] = true;
+  renderSuggestions();
+}
+
+function aiReset() { aiStep=0; aiAns={}; aiResults=null; aiAdded={}; renderAI(); }
+
+// Admin
+async function renderAdmin() {
+  const { data: users } = await sb.from('profiles').select('*').order('created_at');
+  const { data: invites } = await sb.from('invites').select('*').eq('used',false).order('created_at',{ascending:false});
+
+  const mems = (users||[]).map(u =>
+    '<div class="mem-row">' +
+    '<div class="nav-av" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,' + avc(u.name) + ',' + avc(u.name) + '99);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + esc(u.name[0].toUpperCase()) + '</div>' +
+    '<div class="mem-info"><div class="mem-name">' + esc(u.name) + (u.id===user.id?' (you)':'') + '</div><div class="mem-email">' + esc(u.email||'') + '</div></div>' +
+    '<span class="rbadge ' + (u.is_admin?'r-admin':'r-member') + '">' + (u.is_admin?'Admin':'Member') + '</span>' +
+    (u.id !== user.id ?
+      '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:4px 9px" onclick="toggleAdmin('' + u.id + '',' + u.is_admin + ')">' + (u.is_admin?'Remove admin':'Make admin') + '</button>' +
+      '<button class="btn btn-sm" style="background:rgba(192,57,43,.15);color:var(--red-light);border:1px solid rgba(192,57,43,.3);font-size:10px;padding:4px 9px" onclick="removeUser('' + u.id + '')">Remove</button>' : '') +
+    '</div>'
+  ).join('');
+
+  const unusedCodes = (invites||[]).map(i => '<div style="color:var(--gold);font-family:monospace;font-size:14px;letter-spacing:2px;margin-bottom:4px">' + i.code + '</div>').join('');
+
+  setVC(
+    '<div class="stitle">Admin ⚙️</div><div class="ssub">Manage family members and invite codes.</div>' +
+    '<div class="adm-card"><div class="adm-title">🎟 Invite Codes</div>' +
+    '<p style="color:var(--muted);font-size:12px;margin-bottom:14px">Generate a code and share it. Each code can only be used once.</p>' +
+    '<button class="btn btn-gold btn-sm" onclick="genInvite()" style="margin-bottom:14px">Generate new code</button>' +
+    '<div id="inv-result"></div>' +
+    (unusedCodes ? '<div style="margin-top:14px"><div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px">Active unused codes</div>' + unusedCodes + '</div>' : '') +
+    '</div>' +
+    '<div class="adm-card"><div class="adm-title">👨‍👩‍👧‍👦 Family Members</div>' + mems + '</div>'
+  );
+}
+
+async function genInvite() {
+  const code = Math.random().toString(36).slice(2,6).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+  await sb.from('invites').insert({ code: code, created_by: user.id });
+  const el = eid('inv-result');
+  if (el) el.innerHTML = '<div class="alert alert-ok" style="margin-bottom:10px">Code generated. Share it with your family member.</div><div class="code-box"><div class="code-val">' + code + '</div><button class="copy-btn" id="cbtn" onclick="copyCode('' + code + '')">Copy</button></div>';
+  renderAdmin();
+}
+
+function copyCode(code) {
+  navigator.clipboard.writeText(code);
+  const btn = eid('cbtn');
+  if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { if(eid('cbtn')) eid('cbtn').textContent = 'Copy'; }, 2000); }
+}
+
+async function toggleAdmin(uid, isAdmin) {
+  await sb.from('profiles').update({ is_admin: !isAdmin }).eq('id', uid);
+  renderAdmin();
+}
+
+async function removeUser(uid) {
+  if (!confirm('Remove this family member?')) return;
+  await sb.from('wishes').delete().eq('user_id', uid);
+  await sb.from('profiles').delete().eq('id', uid);
+  renderAdmin();
+}
+
+// Go
+boot();
+</script>
+</body>
+</html>
